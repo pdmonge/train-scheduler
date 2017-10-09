@@ -68,7 +68,7 @@ function addTrainToDB () {
   // Checks that all inputs contain valid data
   var newTrain = getValidTrain();
 
-  if (newTrain != false) {
+  if (newTrain) {
     // Uploads train data to the database
     database.ref().push(newTrain);
 
@@ -77,8 +77,8 @@ function addTrainToDB () {
     $("#destination-input").val("");
     $("#first-time-input").val("");
     $("#frequency-input").val("");
-  } // if (validateInput())
-} // function addTrain
+  } // if (newTrain)
+} // function addTrainToDB
 
 // Normalize the train frequency-input upon losing focus
 $('#frequency-input').focusout(function(){
@@ -99,9 +99,27 @@ $("#add-train-btn").on("click", function(event) {
 // Receives tFirstTime as a moment object (required)
 // Receives tFrequency as a string 'hh:mm' (required)
 // Returns an object { arrivalMinutes: num, nextArrival: moment-object }
+// Math courtesy of DU Coding Bootcamp
 function calcTrainTimes(tFirstTime, tFrequency) {
-  var firstTime = tFirstTime;
-  var frequency = tFrequency;
+  // First Time (pushed back 1 year to make sure it comes before current time)
+  var firstTimeConverted = moment(tFirstTime, "hh:mm").subtract(1, "years");
+
+  // Current Time
+  var currentTime = moment();
+
+  // Difference between the times
+  var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
+
+  // Time apart (remainder)
+  var tRemainder = diffTime % tFrequency;
+
+  // Minutes Until Train
+  var tMinutesTillTrain = tFrequency - tRemainder;
+
+  // Next Train
+  var nextTrain = moment().add(tMinutesTillTrain, "minutes");
+
+  return { arrivalMinutes: tMinutesTillTrain, nextArrival: nextTrain };
 }
 
 // Add a train to the HTML table
@@ -110,7 +128,7 @@ function addRowToTable(aTrain) {
   var trainName = aTrain.name;
   var trainDestination = aTrain.destination;
   var trainFirstTime = moment(aTrain.firstTime,'HHmm');
-  var trainFrequency = aTrain.frequency;
+  var trainFrequency = parseInt(aTrain.frequency);
 
   // train Info
   console.log(trainName);
@@ -119,20 +137,20 @@ function addRowToTable(aTrain) {
   console.log(trainFrequency);
 
   // Get the next arrival minutes and next arrival time using calcTrainTimes
+  // Should be object: { arrivalMinutes: num, nextArrival: moment-object }
   var calcValues = calcTrainTimes(trainFirstTime, trainFrequency);
   
-
   // Calculate the minutes until next arrival
-  var trainArrivalMinutes = trainMonths * trainFrequency;
-  console.log(trainArrivalMinutes);
+  var trainArrivalMinutes = calcValues.arrivalMinutes + ' minutes';
+  var trainNextArrival = calcValues.nextArrival.format('hh:mm A');
 
   // Add train's data into the table
   $("#train-table > tbody").append("<tr><td>" +
     trainName + "</td><td>" +
     trainDestination + "</td><td>" +
-    trainFrequency + "</td><td>" /*+
+    trainFrequency + "</td><td>" +
     trainNextArrival + "</td><td>" +
-    trainArrivalMinutes + "</td></tr>"*/
+    trainArrivalMinutes + "</td></tr>"
   );
 
 }
